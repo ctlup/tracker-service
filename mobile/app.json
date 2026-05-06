@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "Tracker",
+    "slug": "tracker-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "tracker",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.tracker",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Tracker needs permission to record your location.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Tracker requires 'Always' permission to record location in the background.",
+        "NSLocationAlwaysUsageDescription": "Tracker records your location in the background.",
+        "UIBackgroundModes": ["location", "fetch"]
+      }
+    },
+    "android": {
+      "package": "com.example.tracker",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "WAKE_LOCK"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Tracker requires 'Always' permission to record location in the background.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "apiBase": "REPLACE_WITH_YOUR_BACKEND_URL",
+      "eas": {
+        "projectId": "REPLACE_AFTER_eas_init"
+      }
+    }
+  }
+}

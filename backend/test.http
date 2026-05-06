@@ -1,0 +1,123 @@
+# tracker-service — REST Client tests for VS Code
+# Install the "REST Client" extension (humao.rest-client) and click "Send Request" above each block.
+# Requests are run sequentially; later requests reference variables captured from earlier responses.
+
+@host = http://localhost:8080
+@deviceId = phone-test-001
+
+###  1. Health check
+GET {{host}}/health
+
+###  2. Register a new device
+# @name register
+POST {{host}}/devices/register
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}",
+  "name": "Test Phone",
+  "type": "cyclist"
+}
+
+###  3. Capture the API key from the previous response
+@apiKey = {{register.response.body.apiKey}}
+
+###  4. Send a GPS ping (Rome, Colosseum)
+POST {{host}}/location
+Content-Type: application/json
+x-api-key: {{apiKey}}
+
+{
+  "lat": 41.8902,
+  "lng": 12.4922,
+  "speed": 5.2
+}
+
+###  5. Send another GPS ping (slightly moved)
+POST {{host}}/location
+Content-Type: application/json
+x-api-key: {{apiKey}}
+
+{
+  "lat": 41.8903,
+  "lng": 12.4925,
+  "speed": 5.4
+}
+
+###  6. Send a ping with an explicit timestamp
+POST {{host}}/location
+Content-Type: application/json
+x-api-key: {{apiKey}}
+
+{
+  "lat": 41.8905,
+  "lng": 12.4930,
+  "speed": 6.0,
+  "timestamp": "2026-05-06T12:00:00.000Z"
+}
+
+###  7. Try a ping with a bad API key (should return 401)
+POST {{host}}/location
+Content-Type: application/json
+x-api-key: not-a-real-key
+
+{
+  "lat": 41.8902,
+  "lng": 12.4922
+}
+
+###  8. Try a ping with no API key (should return 401)
+POST {{host}}/location
+Content-Type: application/json
+
+{
+  "lat": 41.8902,
+  "lng": 12.4922
+}
+
+###  9. Try a ping with invalid lat (should return 400)
+POST {{host}}/location
+Content-Type: application/json
+x-api-key: {{apiKey}}
+
+{
+  "lat": 999,
+  "lng": 12.4922
+}
+
+### 10. Fetch history for the test device
+GET {{host}}/location/{{deviceId}}/history
+
+### 11. Fetch limited history
+GET {{host}}/location/{{deviceId}}/history?limit=3
+
+### 12. List all registered devices (no api keys returned)
+GET {{host}}/devices
+
+### 13. Re-register the same deviceId (should return existing record, not 500)
+POST {{host}}/devices/register
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}",
+  "name": "Test Phone",
+  "type": "cyclist"
+}
+
+### 14. Register with invalid type (should return 400)
+POST {{host}}/devices/register
+Content-Type: application/json
+
+{
+  "deviceId": "phone-test-002",
+  "name": "Bad Type",
+  "type": "spaceship"
+}
+
+### 15. Register with missing fields (should return 400)
+POST {{host}}/devices/register
+Content-Type: application/json
+
+{
+  "deviceId": "phone-test-003"
+}

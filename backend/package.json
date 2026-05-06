@@ -1,0 +1,24 @@
+{
+  "name": "tracker-service",
+  "version": "1.0.0",
+  "description": "GPS tracking microservice for vehicles and people",
+  "type": "module",
+  "main": "src/index.mjs",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "dev": "node --watch src/index.mjs",
+    "seed": "node scripts/seed.mjs",
+    "check-db": "node scripts/checkDb.mjs",
+    "simulate-app": "node scripts/simulateApp.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.5.1",
+    "winston": "^3.13.1"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.1.0"
+  }
+}

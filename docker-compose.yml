@@ -1,0 +1,44 @@
+services:
+  backend:
+    container_name: tracker-service_backend_1
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - bridge
+    environment:
+      - PORT=8080
+      - MONGO_URI=mongodb://mongo:27017/tracker
+      - LOG_LEVEL=info
+      # Google Geocoding API key. If set in the .env file, it will be automatically used,
+      # otherwise it will be empty and the system will still work (city/country will be null).
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+    restart: unless-stopped
+
+  mongo:
+    container_name: tracker-service_mongo_1
+    image: mongo:7
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - bridge
+    ports:
+      - "27017:27017"
+    volumes:
+      - tracker-mongo-data:/data/db
+
+networks:
+  bridge:
+    driver: bridge
+
+volumes:
+  tracker-mongo-data:
