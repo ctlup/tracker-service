@@ -1,17 +1,21 @@
-// services/locationTask.js
-//
-// Background location task definition.
-// expo-task-manager uses this name to call the task. The name must match between app.json and
-// the startBackgroundTracking() function.
-//
-// This task is called by the OS even when the phone is locked / app is in the background.
-// Reads the API key from expo-secure-store, POSTs to /location.
-// On error it continues SILENTLY — we do not want to crash the task because the OS
-// may disable it.
-
 import * as TaskManager from 'expo-task-manager';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+
+interface LocationTaskData {
+  locations: Array<{
+    coords: {
+      latitude: number;
+      longitude: number;
+      speed: number | null;
+      heading: number | null;
+      accuracy: number | null;
+      altitude: number | null;
+      altitudeAccuracy: number | null;
+    };
+    timestamp: number;
+  }>;
+}
 
 export const LOCATION_TASK_NAME = 'tracker-background-location';
 
@@ -20,7 +24,7 @@ const API_BASE =
   Constants.manifest?.extra?.apiBase ||
   'http://10.0.2.2:8080';
 
-TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
+TaskManager.defineTask<LocationTaskData>(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) {
     // Internal task error — log and continue, the OS will call us again.
     console.warn('[bg-task] error:', error.message);
@@ -36,9 +40,9 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   try {
     apiKey = await SecureStore.getItemAsync('tracker.apiKey');
   } catch (e) {
-    console.warn('[bg-task] secure-store read failed:', e?.message);
-    return;
-  }
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('[bg-task] post failed:', msg);
+    }
   if (!apiKey) {
     // Not registered yet. The task should not have run, but guard just in case.
     return;
@@ -66,9 +70,9 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
         }),
       });
     } catch (e) {
-      // Network errors are normal — the user may be in a tunnel, signal may drop.
-      // Will retry on the next location update.
-      console.warn('[bg-task] post failed:', e?.message);
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('[bg-task] post failed:', msg);
+    
     }
   }
 });

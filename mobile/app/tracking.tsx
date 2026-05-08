@@ -1,6 +1,3 @@
-// app/tracking.jsx
-
-
 import { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -19,16 +16,29 @@ import { router } from 'expo-router';
 import { getApiKey, getProfile, clearAll } from '../services/storage';
 import { LOCATION_TASK_NAME } from '../services/locationTask';
 
-export default function Tracking() {
-  const [status, setStatus] = useState('initialising'); // initialising | tracking | denied | error
-  const [profile, setProfileState] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
+type TrackingStatus = 'initialising' | 'tracking' | 'denied' | 'error';
 
-  // Foreground counter — background pings won't be reflected on the screen, but
-  // we start a watcher while the screen is open so the user gets a "I'm alive" feeling.
-  const [lastFix, setLastFix] = useState(null);
-  const [pingsSent, setPingsSent] = useState(0);
-  const fgWatchRef = useRef(null);
+interface LastFix {
+  lat: number;
+  lng: number;
+  speed: number | null;
+  direction: number | null;
+  timestamp: string;
+}
+
+interface ProfileState {
+  name: string;
+  type: string;
+  deviceId: string;
+}
+
+export default function Tracking() {
+  const [status, setStatus] = useState<TrackingStatus>('initialising');
+  const [profile, setProfileState] = useState<ProfileState | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [lastFix, setLastFix] = useState<LastFix | null>(null);
+  const [pingsSent, setPingsSent] = useState<number>(0);
+  const fgWatchRef = useRef<{ remove: () => void } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +113,7 @@ export default function Tracking() {
               lat: loc.coords.latitude,
               lng: loc.coords.longitude,
               speed: loc.coords.speed,
+              direction: loc.coords.heading,
               timestamp: new Date(loc.timestamp || Date.now()).toISOString(),
             });
             setPingsSent((n) => n + 1);
@@ -112,8 +123,9 @@ export default function Tracking() {
 
         setStatus('tracking');
       } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Failed to start tracking';
         setStatus('error');
-        setErrorMsg(e?.message || 'Failed to start tracking');
+        setErrorMsg(msg);
       }
     })();
 
@@ -149,7 +161,8 @@ export default function Tracking() {
               await clearAll();
               router.replace('/');
             } catch (e) {
-              Alert.alert('Error', e?.message || 'Unknown error');
+              const msg = e instanceof Error ? e.message : 'Unknown error';
+              Alert.alert('Error', msg);
             }
           },
         },
@@ -215,7 +228,7 @@ export default function Tracking() {
         )}
 
         <Pressable style={styles.resetBtn} onPress={handleStopAndReset}>
-          <Text style={styles.resetBtnText}>Stop and reset</Text>
+          <Text style={styles.resetBtnText}>Durdur ve sıfırla</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

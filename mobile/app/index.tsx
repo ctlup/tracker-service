@@ -1,4 +1,4 @@
-// app/index.jsx
+// app/index.tsx
 //
 // First-launch screen. On mount we check if an apiKey already exists in secure storage:
 //   - if yes → jump straight to /tracking
@@ -20,12 +20,12 @@ import {
   setProfile,
 } from '../services/storage';
 import { registerDevice } from '../services/api';
+import type { DeviceType } from '../services/storage';
 
 export default function Index() {
-  const [checking, setChecking] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-
+  const [checking, setChecking] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     (async () => {
       try {
@@ -36,15 +36,15 @@ export default function Index() {
           return;
         }
       } catch (e) {
-        // SecureStore failures are recoverable — fall through to the form.
-        console.warn('SecureStore check failed:', e?.message);
-      } finally {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn('SecureStore check failed:', msg);
+      } finally { 
         setChecking(false);
       }
     })();
   }, []);
 
-  const handleRegister = async ({ name, type }) => {
+  const handleRegister = async ({ name, type }: { name: string; type: DeviceType }) => {
     setSubmitting(true);
     setError(null);
 
@@ -61,7 +61,8 @@ export default function Index() {
 
       router.replace('/tracking');
     } catch (e) {
-      setError(e?.message || 'Registration failed');
+      const msg = e instanceof Error ? e.message : 'Registration failed';
+      setError(msg);
     } finally {
       setSubmitting(false);
     }

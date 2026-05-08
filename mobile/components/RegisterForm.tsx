@@ -1,8 +1,3 @@
-// components/RegisterForm.jsx
-//
-// First-launch form: collect a name and a type (cyclist / car / scooter),
-// then hand the values back to the parent via onSubmit.
-
 import { useState } from 'react';
 import {
   View,
@@ -13,12 +8,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 
-const TYPES = ['cyclist', 'car', 'scooter'];
+import type { DeviceType } from '../services/storage';
 
-export default function RegisterForm({ onSubmit, submitting, error }) {
-  const [name, setName] = useState('');
-  const [type, setType] = useState('cyclist');
-  const [touched, setTouched] = useState(false);
+interface RegisterFormProps {
+  onSubmit: (data: { name: string; type: DeviceType }) => void;
+  submitting?: boolean;
+  error?: string | null;
+}
+
+const TYPES: DeviceType[] = ['cyclist', 'car', 'scooter'];
+
+export default function RegisterForm({ onSubmit, submitting, error }: RegisterFormProps) {
+  const [name, setName] = useState<string>('');
+  const [type, setType] = useState<DeviceType>('cyclist');
+  const [touched, setTouched] = useState<boolean>(false);
 
   const nameInvalid = touched && name.trim().length === 0;
 

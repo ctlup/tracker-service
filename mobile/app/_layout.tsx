@@ -5,7 +5,7 @@
 // or the OS restarts it). Otherwise the OS will fail with an "unregistered task" error
 // when it tries to call the task.
 
-import '../services/locationTask'; // Task definition loaded as a side effect
+import '../services/locationTask';
 import { Stack } from 'expo-router';
 
 export default function RootLayout() {
