@@ -10,12 +10,32 @@ import {
   Alert,
 } from 'react-native';
 import * as Location from 'expo-location';
-import * as TaskManager from 'expo-task-manager';
 import { router } from 'expo-router';
 
 import { getApiKey, getProfile, clearAll } from '../services/storage';
-import { LOCATION_TASK_NAME } from '../services/locationTask';
+import { postLocation } from '../services/api';
 
+function computeBearing(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const toDeg = (rad: number) => (rad * 180) / Math.PI;
+
+  const phi1 = toRad(lat1);
+  const phi2 = toRad(lat2);
+  const dLambda = toRad(lng2 - lng1);
+
+  const y = Math.sin(dLambda) * Math.cos(phi2);
+  const x =
+    Math.cos(phi1) * Math.sin(phi2) -
+    Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLambda);
+
+  const theta = Math.atan2(y, x);
+  return (toDeg(theta) + 360) % 360;
+}
 type TrackingStatus = 'initialising' | 'tracking' | 'denied' | 'error';
 
 interface LastFix {
@@ -39,6 +59,8 @@ export default function Tracking() {
   const [lastFix, setLastFix] = useState<LastFix | null>(null);
   const [pingsSent, setPingsSent] = useState<number>(0);
   const fgWatchRef = useRef<{ remove: () => void } | null>(null);
+  const apiKeyRef = useRef<string | null>(null);
+  const prevLocRef = useRef<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,9 +75,10 @@ export default function Tracking() {
         }
         if (cancelled) return;
 
+        apiKeyRef.current = apiKey;
         setProfileState(prof);
 
-        // 1. Foreground permission — required.
+        // Foreground permission — required.
         const fg = await Location.requestForegroundPermissionsAsync();
         if (fg.status !== 'granted') {
           setStatus('denied');
@@ -63,61 +86,76 @@ export default function Tracking() {
           return;
         }
 
-        // 2. Background permission — required for app to work when closed.
-        // On Android, "Always allow" is needed; on iOS, "Always".
-        const bg = await Location.requestBackgroundPermissionsAsync();
-        if (bg.status !== 'granted') {
-          setStatus('denied');
-          setErrorMsg(
-            'Background location permission is required. Please change ' +
-              'location permission to "Always allow" in your phone settings.'
-          );
-          return;
-        }
-
-        // 3. Start background task. If already running, skip.
-        const isRegistered = await TaskManager.isTaskRegisteredAsync(
-          LOCATION_TASK_NAME
-        );
-
-        if (!isRegistered) {
-          await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-            accuracy: Location.Accuracy.High,
-            timeInterval: 2000,
-            distanceInterval: 5,
-            // Required on Android — shows a persistent notification to the user
-            // indicating that tracking is active. Without this, the OS may kill the task.
-            foregroundService: {
-              notificationTitle: 'Tracker active',
-              notificationBody: 'Recording location data.',
-              notificationColor: '#04724d',
-            },
-            pausesUpdatesAutomatically: false,
-            showsBackgroundLocationIndicator: true,
-            // If the OS kills the app, iOS will attempt to restart it.
-            activityType: Location.ActivityType.Other,
-          });
-        }
-
-        // 4. Foreground watcher to display the current location on the UI while the screen is open.
-        // This watcher is ONLY for display purposes — the actual POST is handled by the background task.
+        // Foreground-only watcher. Posts to backend while the screen is open.
+        // NOTE: Background tracking is only available in a real EAS build
+        // (not in Expo Go) — that will be the next step.
         const sub = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
             timeInterval: 2000,
             distanceInterval: 5,
           },
-          (loc) => {
+          async (loc) => {
             if (!loc?.coords) return;
-            setLastFix({
+            console.log('[gps]', {
+              heading: loc.coords.heading,
+              prev: prevLocRef.current,
               lat: loc.coords.latitude,
               lng: loc.coords.longitude,
-              speed: loc.coords.speed,
-              direction: loc.coords.heading,
-              timestamp: new Date(loc.timestamp || Date.now()).toISOString(),
             });
+
+            const lat = loc.coords.latitude;
+            const lng = loc.coords.longitude;
+
+            // Use GPS heading if available; otherwise compute bearing from prev fix.
+
+            
+            let direction: number | null = null;
+
+            if (loc.coords.heading != null && loc.coords.heading > 0) {
+              direction = loc.coords.heading;
+            } else if (prevLocRef.current) {
+              direction = computeBearing(
+                prevLocRef.current.lat,
+                prevLocRef.current.lng,
+                lat,
+                lng,
+              );
+              console.log('[direction]', direction);
+            }
+
+            prevLocRef.current = { lat, lng };
+
+            const fix: LastFix = {
+              lat,
+              lng,
+              speed: loc.coords.speed,
+              direction,
+              timestamp: new Date(loc.timestamp || Date.now()).toISOString(),
+            };
+
+            setLastFix(fix);
             setPingsSent((n) => n + 1);
-          }
+
+            const key = apiKeyRef.current;
+            if (key) {
+              try {
+                await postLocation({
+                  apiKey: key,
+                  lat: fix.lat,
+                  lng: fix.lng,
+                  speed: fix.speed ?? 0,
+                  direction: fix.direction ?? null,
+                  timestamp: fix.timestamp,
+                });
+              } catch (e) {
+                console.warn(
+                  '[fg-post] failed',
+                  e instanceof Error ? e.message : String(e),
+                );
+              }
+            }
+          },
         );
         fgWatchRef.current = sub;
 
@@ -149,12 +187,6 @@ export default function Tracking() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const isRegistered = await TaskManager.isTaskRegisteredAsync(
-                LOCATION_TASK_NAME
-              );
-              if (isRegistered) {
-                await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-              }
               if (fgWatchRef.current?.remove) {
                 fgWatchRef.current.remove();
               }
@@ -166,7 +198,7 @@ export default function Tracking() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -189,46 +221,43 @@ export default function Tracking() {
             </View>
           )}
           {status === 'tracking' && (
-            <Text style={styles.statusOk}>● Live (also running in background)</Text>
+            <Text style={styles.statusOk}>● Live (screen-only demo)</Text>
           )}
-          {status === 'denied' && (
-            <Text style={styles.statusBad}>Permission denied</Text>
-          )}
+          {status === 'denied' && <Text style={styles.statusBad}>Permission denied</Text>}
           {status === 'error' && <Text style={styles.statusBad}>Error</Text>}
           {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
         </View>
 
         {status === 'tracking' && (
           <Text style={styles.bgNote}>
-            You can close the screen and put your phone in your pocket. Tracking will continue.
+            This Expo Go demo only tracks while the screen is open. The real APK
+            (next step) will continue in the background.
           </Text>
         )}
 
         {lastFix && (
           <View style={styles.fixBox}>
-            <Text style={styles.fixLabel}>Last fix (while screen is open)</Text>
+            <Text style={styles.fixLabel}>Last fix</Text>
             <Text style={styles.fixCoord}>
               {lastFix.lat.toFixed(6)}, {lastFix.lng.toFixed(6)}
             </Text>
-            <Text style={styles.fixMeta}>
-              speed: {(lastFix.speed || 0).toFixed(2)} m/s
-            </Text>
+            <Text style={styles.fixMeta}>speed: {(lastFix.speed || 0).toFixed(2)} m/s</Text>
             <Text style={styles.fixMeta}>time: {lastFix.timestamp}</Text>
+            <Text style={styles.fixMeta}>
+              direction: {lastFix.direction != null ? `${lastFix.direction.toFixed(0)}°` : '—'}
+            </Text>
           </View>
         )}
 
         {pingsSent > 0 && (
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>SEEN WHILE ON SCREEN</Text>
+            <Text style={styles.statLabel}>PINGS SENT</Text>
             <Text style={styles.statValue}>{pingsSent}</Text>
-            <Text style={styles.statHint}>
-              (background pings don't show here but are sent to the backend)
-            </Text>
           </View>
         )}
 
         <Pressable style={styles.resetBtn} onPress={handleStopAndReset}>
-          <Text style={styles.resetBtnText}>Durdur ve sıfırla</Text>
+          <Text style={styles.resetBtnText}>Stop and reset</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -270,7 +299,6 @@ const styles = StyleSheet.create({
   },
   statLabel: { fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 },
   statValue: { fontSize: 28, fontWeight: '700', marginTop: 4, color: '#04724d' },
-  statHint: { fontSize: 11, color: '#888', marginTop: 4, textAlign: 'center' },
   resetBtn: {
     marginTop: 8,
     paddingVertical: 12,

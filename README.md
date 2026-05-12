@@ -3,7 +3,6 @@
 A GPS tracking backend for mobile devices (cyclists, cars, scooters). Devices register once, then POST location pings continuously from the background. All pings are stored in MongoDB and queryable via a history endpoint.
 
 ---
-
 **Data flow:**
 
 1. Mobile app registers the device on first launch → receives an `apiKey`

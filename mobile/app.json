@@ -11,23 +11,16 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.example.tracker",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Tracker needs permission to record your location.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Tracker requires 'Always' permission to record location in the background.",
-        "NSLocationAlwaysUsageDescription": "Tracker records your location in the background.",
-        "UIBackgroundModes": ["location", "fetch"]
+        "NSLocationWhenInUseUsageDescription": "Tracker needs permission to record your location."
       }
     },
     "android": {
       "package": "com.example.tracker",
       "versionCode": 1,
+      "usesCleartextTraffic": true,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION",
-        "POST_NOTIFICATIONS",
-        "WAKE_LOCK"
+        "ACCESS_FINE_LOCATION"
       ]
     },
     "plugins": [
@@ -36,9 +29,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Tracker requires 'Always' permission to record location in the background.",
-          "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true
+          "locationWhenInUsePermission": "Tracker needs permission to record your location."
         }
       ]
     ],
@@ -46,10 +37,11 @@
       "router": {
         "origin": false
       },
-      "apiBase": "REPLACE_WITH_YOUR_BACKEND_URL",
+      "apiBase": "http://172.20.10.3:8080",
       "eas": {
-        "projectId": "REPLACE_AFTER_eas_init"
+        "projectId": "6f0b83e6-3d34-4cae-a542-f10703d4cc1e"
       }
-    }
+    },
+    "owner": "cansutunc"
   }
 }

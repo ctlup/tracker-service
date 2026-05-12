@@ -26,8 +26,6 @@ const locationSchema = new mongoose.Schema(
       default: 0,
     },
     direction: {
-      // Hareket yönü, derece cinsinden — 0=kuzey, 90=doğu, 180=güney, 270=batı.
-      // Cihaz hareketsizken null kalabilir (GPS yön hesaplayamıyor).
       type: Number,
       default: null,
       min: 0,

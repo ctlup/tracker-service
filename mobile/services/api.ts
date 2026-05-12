@@ -105,7 +105,7 @@ export async function postLocation({
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
     },
-    body: JSON.stringify({ lat, lng, speed, timestamp }),
+    body: JSON.stringify({ lat, lng, speed, direction, timestamp }),
   });
   return parseOrThrow(res);
 }

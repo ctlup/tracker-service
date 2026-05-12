@@ -8,7 +8,7 @@ import logger from '../logger.mjs';
 import { reverseGeocode } from '../services/geocodingService.mjs';
 
 export async function recordLocation(req, res) {
-  const { lat, lng, speed, timestamp } = req.body || {};
+  const { lat, lng, speed, direction, timestamp } = req.body || {};
   const device = req.device; // injected by requireApiKey middleware
 
   if (typeof lat !== 'number' || typeof lng !== 'number') {
@@ -33,6 +33,7 @@ export async function recordLocation(req, res) {
       lat,
       lng,
       speed: typeof speed === 'number' ? speed : 0,
+      direction: typeof direction === 'number' ? direction : null,
       city: place?.city || null,
       country: place?.country || null,
       timestamp: ts,
@@ -52,6 +53,7 @@ export async function recordLocation(req, res) {
       ok: true,
       id: loc._id,
       timestamp: loc.timestamp,
+      direction: loc.direction,
       city: loc.city,
       country: loc.country,
     });
