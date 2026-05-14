@@ -83,12 +83,18 @@ export async function registerDevice({
   name,
   type,
 }: RegisterDeviceParams): Promise<RegisterDeviceResponse> {
-  const res = await fetch(`${API_BASE}/devices/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deviceId, name, type }),
-  });
-  return parseOrThrow(res);
+  const url = `${API_BASE}/devices/register`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, name, type }),
+    });
+    return parseOrThrow(res);
+  } catch (e) {
+    const detail = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    throw new Error(`URL=${url} → ${detail}`);
+  }
 }
 
 export async function postLocation({
