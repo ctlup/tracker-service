@@ -50,8 +50,8 @@ interface HistoryResponse {
   locations: StoredLocation[];
 }
 const API_BASE =
+  process.env.EXPO_PUBLIC_API_BASE ||
   Constants.expoConfig?.extra?.apiBase ||
-  Constants.manifest?.extra?.apiBase ||
   'http://10.0.2.2:8080';
 
 class ApiError extends Error {
