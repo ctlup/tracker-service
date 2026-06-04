@@ -58,7 +58,7 @@ export default function Tracking() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [lastFix, setLastFix] = useState<LastFix | null>(null);
   const [pingsSent, setPingsSent] = useState<number>(0);
-  const fgWatchRef = useRef<{ remove: () => void } | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const apiKeyRef = useRef<string | null>(null);
   const prevLocRef = useRef<{ lat: number; lng: number } | null>(null);
 
@@ -86,80 +86,57 @@ export default function Tracking() {
           return;
         }
 
-        // Foreground-only watcher. Posts to backend while the screen is open.
-        // NOTE: Background tracking is only available in a real EAS build
-        // (not in Expo Go) — that will be the next step.
-        const sub = await Location.watchPositionAsync(
-          {
+        setStatus('tracking');
+
+        intervalRef.current = setInterval(async () => {
+          const loc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.High,
-            timeInterval: 2000,
-            distanceInterval: 5,
-          },
-          async (loc) => {
-            if (!loc?.coords) return;
-            console.log('[gps]', {
-              heading: loc.coords.heading,
-              prev: prevLocRef.current,
-              lat: loc.coords.latitude,
-              lng: loc.coords.longitude,
-            });
+          });
+          if (!loc?.coords) return;
 
-            const lat = loc.coords.latitude;
-            const lng = loc.coords.longitude;
+          const lat = loc.coords.latitude;
+          const lng = loc.coords.longitude;
 
-            // Use GPS heading if available; otherwise compute bearing from prev fix.
-
-            
-            let direction: number | null = null;
-
-            if (loc.coords.heading != null && loc.coords.heading > 0) {
-              direction = loc.coords.heading;
-            } else if (prevLocRef.current) {
-              direction = computeBearing(
-                prevLocRef.current.lat,
-                prevLocRef.current.lng,
-                lat,
-                lng,
-              );
-              console.log('[direction]', direction);
-            }
-
-            prevLocRef.current = { lat, lng };
-
-            const fix: LastFix = {
+          let direction: number | null = null;
+          if (loc.coords.heading != null && loc.coords.heading > 0) {
+            direction = loc.coords.heading;
+          } else if (prevLocRef.current) {
+            direction = computeBearing(
+              prevLocRef.current.lat,
+              prevLocRef.current.lng,
               lat,
               lng,
-              speed: loc.coords.speed,
-              direction,
-              timestamp: new Date(loc.timestamp || Date.now()).toISOString(),
-            };
+            );
+          }
+          prevLocRef.current = { lat, lng };
 
-            setLastFix(fix);
-            setPingsSent((n) => n + 1);
+          const fix: LastFix = {
+            lat,
+            lng,
+            speed: loc.coords.speed,
+            direction,
+            timestamp: new Date(loc.timestamp || Date.now()).toISOString(),
+          };
 
-            const key = apiKeyRef.current;
-            if (key) {
-              try {
-                await postLocation({
-                  apiKey: key,
-                  lat: fix.lat,
-                  lng: fix.lng,
-                  speed: fix.speed ?? 0,
-                  direction: fix.direction ?? null,
-                  timestamp: fix.timestamp,
-                });
-              } catch (e) {
-                console.warn(
-                  '[fg-post] failed',
-                  e instanceof Error ? e.message : String(e),
-                );
-              }
+          setLastFix(fix);
+          setPingsSent((n) => n + 1);
+
+          const key = apiKeyRef.current;
+          if (key) {
+            try {
+              await postLocation({
+                apiKey: key,
+                lat: fix.lat,
+                lng: fix.lng,
+                speed: fix.speed ?? 0,
+                direction: fix.direction ?? null,
+                timestamp: fix.timestamp,
+              });
+            } catch (e) {
+              console.warn('[fg-post] failed', e instanceof Error ? e.message : String(e));
             }
-          },
-        );
-        fgWatchRef.current = sub;
-
-        setStatus('tracking');
+          }
+        }, 2000);
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Failed to start tracking';
         setStatus('error');
@@ -169,9 +146,9 @@ export default function Tracking() {
 
     return () => {
       cancelled = true;
-      if (fgWatchRef.current?.remove) {
-        fgWatchRef.current.remove();
-        fgWatchRef.current = null;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
   }, []);
@@ -187,8 +164,9 @@ export default function Tracking() {
           style: 'destructive',
           onPress: async () => {
             try {
-              if (fgWatchRef.current?.remove) {
-                fgWatchRef.current.remove();
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
               }
               await clearAll();
               router.replace('/');
@@ -221,7 +199,7 @@ export default function Tracking() {
             </View>
           )}
           {status === 'tracking' && (
-            <Text style={styles.statusOk}>● Live (screen-only demo)</Text>
+            <Text style={styles.statusOk}>● Live</Text>
           )}
           {status === 'denied' && <Text style={styles.statusBad}>Permission denied</Text>}
           {status === 'error' && <Text style={styles.statusBad}>Error</Text>}
@@ -230,8 +208,7 @@ export default function Tracking() {
 
         {status === 'tracking' && (
           <Text style={styles.bgNote}>
-            This Expo Go demo only tracks while the screen is open. The real APK
-            (next step) will continue in the background.
+            Tracking is active while the screen is open.
           </Text>
         )}
 
