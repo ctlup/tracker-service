@@ -1,55 +1,44 @@
 # Tracker Service
 
-GPS tracking backend + Expo mobile app. Devices register once, receive an `apiKey`, then POST location pings every 2 seconds while the app is in the foreground. Pings are stored in MongoDB and queryable by device.
+GPS tracking backend + Expo mobile app. Devices register once, get an `apiKey`, then POST location pings every 2 seconds while the app is open. Pings are stored in MongoDB.
 
 ---
 
 ## How it works
 
 1. App registers the device → receives an `apiKey`
-2. While screen is on, app POSTs a GPS ping every 2 seconds using that key
-3. Backend stores each ping; optionally reverse-geocodes it via Google (optional, cached)
+2. While the screen is on, app POSTs a GPS ping every 2 seconds
+3. Backend stores each ping; optionally reverse-geocodes via Google (cached)
 
 ---
 
 ## Backend
 
-### Option 1 — Local (Node + MongoDB)
-
-**Requirements:** 
+### Local (Node + MongoDB)
 
 ```bash
 cd backend
-cp ../.env.example .env      # edit MONGO_URI if needed
+cp ../.env.example .env
 npm install
 npm start
 ```
 
-Backend listens on `http://localhost:8080`.
+Runs on `http://localhost:8080`.
 
 ---
 
-### Option 2 — Docker 
+### Docker
 
-**Requirements:** 
 ```bash
 git clone <repo-url>
 cd tracker-service
-cp .env.example .env         # edit if needed
+cp .env.example .env
 docker compose up -d
 ```
 
-Verify it's running:
-
+Check logs:
 ```bash
 docker compose logs -f
-```
-
-Expected:
-```
-mongo     | Waiting for connections on port 27017
-backend   | [info] MongoDB connected
-backend   | [info] Tracker service listening on port 8080
 ```
 
 Stop: `docker compose down`  
@@ -57,28 +46,28 @@ Stop + wipe data: `docker compose down -v`
 
 ---
 
-### Option 3 — Deploy to a server
+### Deploy to a server
 
 ```bash
 ssh user@your-server
 git clone <repo-url>
 cd tracker-service
-cp .env.example .env         
+cp .env.example .env
 docker compose up -d
 ```
 
-Backend is available at `http://your-server:8080`.
+Backend available at `http://your-server:8080`.
 
 **HTTPS (required for iOS):** put a reverse proxy in front of port 8080.
 
-Caddy (auto TLS):
+Caddy example:
 ```
-tracker.yourcompany.com {
+tracker.example.com {
     reverse_proxy localhost:8080
 }
 ```
 
-After code changes:
+After updates:
 ```bash
 git pull && docker compose up -d --build
 ```
@@ -89,12 +78,12 @@ git pull && docker compose up -d --build
 
 Copy `.env.example` to `.env` in the project root.
 
-| Variable         | Default                         | Description                              |
-|------------------|---------------------------------|------------------------------------------|
-| `PORT`           | `8080`                          | HTTP port                                |
-| `MONGO_URI`      | `mongodb://mongo:27017/tracker` | MongoDB connection string                |
-| `LOG_LEVEL`      | `info`                          | `error` / `warn` / `info` / `debug`      |
-| `GOOGLE_API_KEY` | *(empty)*                       | Enables reverse geocoding — optional     |
+| Variable         | Default                         | Description                          |
+|------------------|---------------------------------|--------------------------------------|
+| `PORT`           | `8080`                          | HTTP port                            |
+| `MONGO_URI`      | `mongodb://mongo:27017/tracker` | MongoDB connection string            |
+| `LOG_LEVEL`      | `info`                          | `error` / `warn` / `info` / `debug`  |
+| `GOOGLE_API_KEY` | *(empty)*                       | Enables reverse geocoding (optional) |
 
 ---
 
@@ -114,10 +103,10 @@ Copy `.env.example` to `.env` in the project root.
 POST /devices/register
 Content-Type: application/json
 
-{ "deviceId": "phone-001", "name": "Anna's Bike", "type": "cyclist" }
+{ "deviceId": "phone-001", "name": "My Device", "type": "cyclist" }
 ```
 
-Response includes `apiKey` — save it, the app uses it for all pings.
+Response includes `apiKey` — the app uses this for all subsequent pings.
 
 ### Send a ping
 
@@ -139,7 +128,7 @@ GET /location/phone-001/history?limit=50
 
 ## Mobile App
 
-The Expo app (`mobile/`) registers the device on first launch, then tracks in the foreground.
+Expo app (`mobile/`) — registers on first launch, tracks in the foreground.
 
 ### Dev (Expo Go)
 
@@ -149,7 +138,7 @@ npm install
 npx expo start
 ```
 
-Set the backend URL in `mobile/.env`:
+Set backend URL in `mobile/.env`:
 ```env
 EXPO_PUBLIC_API_BASE=http://<your-local-ip>:8080
 ```
@@ -162,16 +151,16 @@ EXPO_PUBLIC_API_BASE=http://<your-local-ip>:8080
 
 ---
 
-### Build (EAS) + Share with colleagues
+### Build (EAS)
 
-**Prerequisites:** Expo account ([expo.dev](https://expo.dev)), EAS CLI
+Needs an Expo account ([expo.dev](https://expo.dev)) and EAS CLI:
 
 ```bash
 npm install -g eas-cli
 eas login
 ```
 
-**1. Set the backend URL** in [mobile/eas.json](mobile/eas.json) for the target profile:
+Set the backend URL in [mobile/eas.json](mobile/eas.json):
 
 ```json
 "preview": {
@@ -181,18 +170,16 @@ eas login
 }
 ```
 
-> Use your server's public IP (not `localhost`) so colleagues' phones can reach it.
-
-**2. Build:**
+Build:
 
 ```bash
 cd mobile
 eas build --platform android --profile preview
 ```
 
-First build asks to create a Keystore — select **Yes**. Build takes ~10–20 min in the cloud.
+First run will ask to create a Keystore — say yes. Takes ~10–20 min.
 
-**3. Share:** EAS prints a link when done. Download the `.apk` from there or share the link directly. Colleagues install it on Android — they'll need **"Install from unknown sources"** enabled.
+When done, EAS gives a download link. On Android, enable **"Install from unknown sources"** to install the `.apk`.
 
 ---
 
@@ -200,6 +187,5 @@ First build asks to create a Keystore — select **Yes**. Build takes ~10–20 m
 
 ```bash
 docker exec tracker-service_backend_1 node scripts/simulateApp.mjs
-# then check what was stored:
 docker exec tracker-service_backend_1 node scripts/checkDb.mjs
 ```
