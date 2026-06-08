@@ -27,13 +27,13 @@ Runs on `http://localhost:8080`.
 
 ---
 
-### Docker
+### Docker (recommended)
 
 ```bash
 git clone <repo-url>
 cd tracker-service
 cp .env.example .env
-docker compose up -d
+docker compose up -d --build
 ```
 
 Check logs:
@@ -42,25 +42,32 @@ docker compose logs -f
 ```
 
 Stop: `docker compose down`  
-Stop + wipe data: `docker compose down -v`
+Stop + wipe all data: `docker compose down -v`
 
 ---
 
 ### Deploy to a server
 
-```bash
-ssh user@your-server
-git clone <repo-url>
-cd tracker-service
-cp .env.example .env
-docker compose up -d
+On a public server, put nginx in front so the backend port is not directly exposed:
+
+```yaml
+# docker-compose.yml — remove ports from backend, add nginx
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+
+  backend:
+    # no ports: section — only reachable internally
 ```
 
-Backend available at `http://your-server:8080`.
+An `nginx/nginx.conf` is included in the repo. For HTTPS with a domain (Caddy):
 
-**HTTPS (required for iOS):** put a reverse proxy in front of port 8080.
-
-Caddy example:
 ```
 tracker.example.com {
     reverse_proxy localhost:8080
@@ -70,6 +77,32 @@ tracker.example.com {
 After updates:
 ```bash
 git pull && docker compose up -d --build
+```
+
+---
+
+## Windows — Docker Desktop networking
+
+Docker Desktop on Windows (WSL2) does not expose container ports to physical network interfaces automatically. If physical Android devices cannot reach the backend, add a Windows port proxy.
+
+**Find the WSL2 IP:**
+```bash
+wsl ip addr show eth0 | grep "inet "
+```
+
+**Add the port proxy** (run PowerShell as Administrator — replace `YOUR_PC_IP` and `WSL2_IP`):
+```powershell
+netsh interface portproxy add v4tov4 listenaddress=YOUR_PC_IP listenport=9090 connectaddress=WSL2_IP connectport=8080
+netsh advfirewall firewall add rule name="Docker 9090" protocol=TCP dir=in localport=9090 action=allow profile=any
+```
+
+**Update the app** to use port 9090 in `mobile/eas.json` and `mobile/app.json`.
+
+> The WSL2 IP changes every time Docker Desktop restarts — re-run the portproxy command with the new IP after each restart.
+
+**Verify:**
+```powershell
+netsh interface portproxy show all
 ```
 
 ---
@@ -126,9 +159,35 @@ GET /location/phone-001/history?limit=50
 
 ---
 
+## Monitoring
+
+**See registered devices:**
+```bash
+curl http://localhost:8080/devices
+```
+
+**Watch live GPS pings (real-time logs):**
+```bash
+docker logs -f tracker-service_backend_1
+```
+
+**Query MongoDB directly:**
+```bash
+# all devices (including apiKey)
+docker exec -it tracker-service_mongo_1 mongosh tracker --eval "db.devices.find().pretty()"
+
+# location history for a device
+docker exec -it tracker-service_mongo_1 mongosh tracker --eval "db.locations.find({deviceId:'DEVICE_ID'}).sort({timestamp:-1}).limit(20).pretty()"
+
+# ping count per device
+docker exec -it tracker-service_mongo_1 mongosh tracker --eval "db.locations.aggregate([{'\$group':{_id:'\$deviceId',count:{'\$sum':1}}}]).pretty()"
+```
+
+---
+
 ## Mobile App
 
-Expo app (`mobile/`) — registers on first launch, tracks in the foreground.
+Expo app (`mobile/`) — registers on first launch, tracks in the foreground. The backend URL is baked into the APK at build time — no config needed on the phone.
 
 ### Dev (Expo Go)
 
@@ -147,11 +206,12 @@ EXPO_PUBLIC_API_BASE=http://<your-local-ip>:8080
 |--------|-----|
 | Android emulator | `http://10.0.2.2:8080` |
 | iOS simulator | `http://localhost:8080` |
-| Physical device (LAN) | `http://192.168.x.x:8080` |
+| Physical device (same LAN) | `http://<your-pc-ip>:8080` |
+| Physical device (Windows Docker) | `http://<your-pc-ip>:9090` |
 
 ---
 
-### Build (EAS)
+### Build (EAS) — Android APK
 
 Needs an Expo account ([expo.dev](https://expo.dev)) and EAS CLI:
 
@@ -164,11 +224,13 @@ Set the backend URL in [mobile/eas.json](mobile/eas.json):
 
 ```json
 "preview": {
-  "env": { "EXPO_PUBLIC_API_BASE": "http://YOUR_SERVER_IP:8080" },
   "distribution": "internal",
+  "env": { "EXPO_PUBLIC_API_BASE": "http://YOUR_SERVER_IP:8080" },
   "android": { "buildType": "apk" }
 }
 ```
+
+Also update `mobile/app.json` → `extra.apiBase` to the same URL.
 
 Build:
 
@@ -179,7 +241,7 @@ eas build --platform android --profile preview
 
 First run will ask to create a Keystore — say yes. Takes ~10–20 min.
 
-When done, EAS gives a download link. On Android, enable **"Install from unknown sources"** to install the `.apk`.
+When done, EAS gives a download link. Open it on the phone's browser and install. Enable **"Install from unknown sources"** on Android if prompted.
 
 ---
 

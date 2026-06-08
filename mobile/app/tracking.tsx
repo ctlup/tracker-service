@@ -61,6 +61,7 @@ export default function Tracking() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const apiKeyRef = useRef<string | null>(null);
   const prevLocRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lastSentTsRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,6 +94,8 @@ export default function Tracking() {
             accuracy: Location.Accuracy.High,
           });
           if (!loc?.coords) return;
+          if (lastSentTsRef.current === loc.timestamp) return;
+          lastSentTsRef.current = loc.timestamp;
 
           const lat = loc.coords.latitude;
           const lng = loc.coords.longitude;
