@@ -45,7 +45,7 @@
       "router": {
         "origin": false
       },
-      "apiBase": "http://10.30.150.104:8080",
+      "apiBase": "http://172.20.10.3:9090",
       "eas": {
         "projectId": "6f0b83e6-3d34-4cae-a542-f10703d4cc1e"
       }

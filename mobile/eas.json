@@ -11,7 +11,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_BASE": "http://10.30.150.104:8080"
+        "EXPO_PUBLIC_API_BASE": "http://172.20.10.3:9090"
       },
       "android": {
         "buildType": "apk"
@@ -22,7 +22,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_BASE": "http://10.30.150.104:8080"
+        "EXPO_PUBLIC_API_BASE": "http://172.20.10.3:9090"
       },
       "android": {
         "buildType": "apk"
