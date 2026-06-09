@@ -45,7 +45,7 @@
       "router": {
         "origin": false
       },
-      "configUrl": "http://SENIN_DOMAIN_ADRESI:8080/config.json",
+      "configUrl": "http://212.132.125.132:8084/config.json",
       "eas": {
         "projectId": "6f0b83e6-3d34-4cae-a542-f10703d4cc1e"
       }

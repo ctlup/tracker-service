@@ -1,6 +1,6 @@
 declare namespace NodeJS {
   interface ProcessEnv {
-    EXPO_PUBLIC_API_BASE?: string;
+    EXPO_PUBLIC_CONFIG_URL?: string;
   }
 }
 

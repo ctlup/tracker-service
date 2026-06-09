@@ -11,7 +11,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_CONFIG_URL": "http://SENIN_DOMAIN_ADRESI:8080/config.json"
+        "EXPO_PUBLIC_CONFIG_URL": "http://212.132.125.132:8084/config.json"
       },
       "android": {
         "buildType": "apk"
@@ -22,7 +22,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_CONFIG_URL": "http://SENIN_DOMAIN_ADRESI:8080/config.json"
+        "EXPO_PUBLIC_CONFIG_URL": "http://212.132.125.132:8084/config.json"
       },
       "android": {
         "buildType": "apk"

@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 
 const CONFIG_URL =
-  (process.env as Record<string, string | undefined>)['EXPO_PUBLIC_CONFIG_URL'] ||
+  process.env.EXPO_PUBLIC_CONFIG_URL ||
   (Constants.expoConfig?.extra as { configUrl?: string } | undefined)?.configUrl;
 
 const CACHE_KEY = 'tracker.apiBase';
