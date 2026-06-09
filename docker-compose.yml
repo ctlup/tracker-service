@@ -15,9 +15,9 @@ services:
       - PORT=8080
       - MONGO_URI=mongodb://mongo:27017/tracker
       - LOG_LEVEL=info
-      # Google Geocoding API key. If set in the .env file, it will be automatically used,
-      # otherwise it will be empty and the system will still work (city/country will be null).
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+    volumes:
+      - ./config:/app/public:ro
     restart: unless-stopped
 
   mongo:
@@ -31,8 +31,6 @@ services:
       retries: 10
     networks:
       - bridge
-    ports:
-      - "27017:27017"
     volumes:
       - tracker-mongo-data:/data/db
 

@@ -16,6 +16,7 @@ app.use(cors());
 app.use(express.json({ limit: '100kb' }));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
+app.use(express.static('/app/public'));
 
 app.use('/devices', devicesRouter);
 app.use('/location', locationsRouter);
