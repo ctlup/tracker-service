@@ -45,7 +45,7 @@
       "router": {
         "origin": false
       },
-      "configUrl": "https://example.com/tracker-config.json",
+      "configUrl": "https://ctlup.github.io/tracker-service/config.json",
       "eas": {
         "projectId": "6f0b83e6-3d34-4cae-a542-f10703d4cc1e"
       }
