@@ -45,7 +45,7 @@
       "router": {
         "origin": false
       },
-      "apiBase": "http://172.20.10.3:9090",
+      "configUrl": "https://example.com/tracker-config.json",
       "eas": {
         "projectId": "6f0b83e6-3d34-4cae-a542-f10703d4cc1e"
       }

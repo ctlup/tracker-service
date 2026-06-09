@@ -9,7 +9,7 @@
 //        4. navigate to /tracking
 
 import { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 
 import RegisterForm from '../components/RegisterForm';
@@ -20,25 +20,33 @@ import {
   setProfile,
 } from '../services/storage';
 import { registerDevice } from '../services/api';
+import { loadConfig } from '../services/config';
 import type { DeviceType } from '../services/storage';
 
 export default function Index() {
   const [checking, setChecking] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+
   useEffect(() => {
     (async () => {
       try {
+        await loadConfig();
+      } catch (e) {
+        setConfigError(e instanceof Error ? e.message : 'Failed to load config');
+        setChecking(false);
+        return;
+      }
+      try {
         const existing = await getApiKey();
         if (existing) {
-          // Already registered on a previous launch — skip the form entirely.
           router.replace('/tracking');
           return;
         }
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        console.warn('SecureStore check failed:', msg);
-      } finally { 
+        console.warn('SecureStore check failed:', e instanceof Error ? e.message : e);
+      } finally {
         setChecking(false);
       }
     })();
@@ -76,6 +84,14 @@ export default function Index() {
     );
   }
 
+  if (configError) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <Text style={styles.errorText}>Couldn't load config: {configError}</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
@@ -91,6 +107,7 @@ export default function Index() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#fff' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   container: { flex: 1 },
+  errorText: { color: '#c0392b', textAlign: 'center' },
 });

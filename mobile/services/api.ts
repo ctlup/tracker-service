@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import { getApiBase } from './config';
 
 interface RegisterDeviceParams {
   deviceId: string;
@@ -49,10 +49,6 @@ interface HistoryResponse {
   count: number;
   locations: StoredLocation[];
 }
-const API_BASE =
-  process.env.EXPO_PUBLIC_API_BASE ||
-  Constants.expoConfig?.extra?.apiBase ||
-  'http://10.0.2.2:8080';
 
 class ApiError extends Error {
   status?: number;
@@ -83,7 +79,7 @@ export async function registerDevice({
   name,
   type,
 }: RegisterDeviceParams): Promise<RegisterDeviceResponse> {
-  const url = `${API_BASE}/devices/register`;
+  const url = `${getApiBase()}/devices/register`;
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -105,7 +101,7 @@ export async function postLocation({
   direction,
   timestamp,
 }: PostLocationParams): Promise<PostLocationResponse> {
-  const res = await fetch(`${API_BASE}/location`, {
+  const res = await fetch(`${getApiBase()}/location`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -121,9 +117,8 @@ export async function getHistory(
   limit: number = 100,
 ): Promise<HistoryResponse> {
   const res = await fetch(
-    `${API_BASE}/location/${encodeURIComponent(deviceId)}/history?limit=${limit}`
+    `${getApiBase()}/location/${encodeURIComponent(deviceId)}/history?limit=${limit}`
   );
   return parseOrThrow(res);
 }
 
-export { API_BASE };
